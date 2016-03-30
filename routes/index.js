@@ -23,6 +23,7 @@ router.post('/turni/list', function (req, res, next) {
         if (err) return next(err);
         client.query('SELECT turni.id as id, p.nome as percorso, tipo, giorno FROM turni JOIN percorsi p ON percorso = p.id JOIN volontari v ON v.codice=volontario WHERE user_id = $1 ORDER BY(giorno, tipo)', [req.user.id], function (err, result) {
             res.status(200).json(result.rows);
+            done();
         });
     });
 });
@@ -37,20 +38,20 @@ router.post('/turni/start', function (req, res, next) {
                 if (!result.rows[0].report)
                     client.query('insert into report (data, ora_apertura, turno) values (now(), now(), $1) returning id', [parseInt(req.body.turno)], function (err, result) {
                     	if (err) return next(err);
-                    	return res.status(200).json({
+                    	res.status(200).json({
                     		success: true,
                     		report: result.rows[0].id,
                     		message: 'Report aperto con successo'
                     	});
-                    	next();
                     });
                 else
-                	return res.status(401).json({ message: 'Non sei autorizzato ad aprire il report' });
+                	res.status(401).json({ message: 'Non sei autorizzato ad aprire il report' });
             }
             else {
-            	return res.status(401).json({ code: 401, message: 'Non sei autorizzato ad aprire il report' });
+            	res.status(401).json({ code: 401, message: 'Non sei autorizzato ad aprire il report' });
             }
         });
+        done();
     });
 });
 
@@ -72,6 +73,7 @@ router.post('/report/list', function (req, res, next) {
             		error: 'Not authorized to retrieve specified turn'
             	});
         });
+        done();
     });
 });
 
