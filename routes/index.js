@@ -21,10 +21,8 @@ router.post('/volontari/info', function (req, res, next) {
 router.post('/turni/list', function (req, res, next) {
     pg.connect(connString, function (err, client, done) {
         if (err) return next(err);
-        client.query('SELECT turni.id as id, p.nome as percorso, tipo, giorno FROM turni JOIN percorsi p ON percorso = p.id JOIN volontari v ON v.codice=volontario WHERE user_id = $1', [req.user.id], function (err, result) {
-            res.status(200).json({
-                result: result.rows
-            });
+        client.query('SELECT turni.id as id, p.nome as percorso, tipo, giorno FROM turni JOIN percorsi p ON percorso = p.id JOIN volontari v ON v.codice=volontario WHERE user_id = $1 ORDER BY(giorno, tipo)', [req.user.id], function (err, result) {
+            res.status(200).json(result.rows);
         });
     });
 });
@@ -56,6 +54,28 @@ router.post('/turni/start', function (req, res, next) {
     });
 });
 
+router.post('/report/list', function (req, res, next) {
+	var turno = parseInt(req.body.turno);
+	if ((isNaN(turno)) || turno < 0) {
+		res.status(400).json({ code: 400, message: 'A turn id must be provided'});
+		return next();
+	}
+    pg.connect(connString, function (err, client, done) {
+        if (err) return next(err);
+        client.query('select report.id as id, to_char(data, \'DD/MM/YY\') as data, ora_apertura, ora_chiusura, note from report join turni on turni.id=turno where turno = $1 and volontario = $2 ORDER BY (data, ora_apertura) DESC', [turno, req.user.codice], function (err, result) {
+        	if (err) return next(err);
+        	if (result.rowCount)
+            	res.status(200).json(result.rows);
+            else
+            	res.status(401).json({
+            		code: 401,
+            		error: 'Not authorized to retrieve specified turn'
+            	});
+        });
+    });
+});
+
+/*
 router.post('/percorso/bambini', function (req, res, next) {
     res.json({
         message: 'Hai raggiunto l\'indice'
@@ -79,5 +99,5 @@ router.post('/percorso/chiudi', function (req, res, next) {
         message: 'Hai raggiunto l\'indice'
     });
 });
-
+*/
 module.exports = router;
